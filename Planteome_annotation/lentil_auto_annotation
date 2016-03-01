@@ -1,0 +1,88 @@
+import time
+
+############  all the files referenced here are in the project folder as well
+
+
+#data from GRIN
+GRIN =open('/Users/meiera/Documents/Jaiswal/TO/test_folder/lentil_GRIN_germplasm_annotation/descriptor_query.csv')
+#a mapping sheet for translating GRIN phenotypes to their correct TO:xxxxxx ID.
+lentil_maps= open("/Users/meiera/Documents/Jaiswal/TO/test_folder/lentil_GRIN_germplasm_annotation/lentil_trait_maps.csv")
+# a mapping sheet for translating the PI accession number to the GRIN ID for use in URL dbxrefs
+lentil_PI_translate= open("/Users/meiera/Documents/Jaiswal/TO/test_folder/lentil_GRIN_germplasm_annotation/new_PI_translate.csv")
+#the place where the resulting file will be generated
+outfile= "/Users/meiera/Documents/SVN/associations/to-associations/test_lentil_TO/to_germplasm_lentil_GRIN.assoc"
+#used to be here Jaiswal/TO/test_folder/GRIN_germpaslm_annotation/lentil_trait_annotation.tsv
+OUTWRITE = open(outfile,"w")
+OUTWRITE.write("!gaf-version: 2.0\n")
+
+
+GRIN.seek(00)
+lentil_maps.seek(00)
+lentil_PI_translate.seek(00)
+
+
+
+
+######################
+#  create a dictionary of mapped traits
+## each phenotype measurment was mapped to a TO trait
+
+lentil_traits={}
+
+for line in lentil_maps:
+	line1=line.strip('\n')
+	line2=line1.split(",")
+	lentil_traits[line2[0]] = line2[1]
+#print lentil_traits["PEMV"]
+
+
+
+lentil_PI={}
+
+for line in lentil_PI_translate:
+	line1=line.strip('\n')
+	line2=line1.split(",")
+	lentil_PI[line2[1]] = line2[0]
+
+
+
+#go through every line in the grin.xls converted to .csv  and print the appropriate gaf2 formatted line
+
+def call3():
+	if l[6]!='""':
+		#return 'hello'
+		return (l[6]).replace('"','')
+	else: return "PI-"+l[1].replace('"','')
+
+
+
+date=str(time.strftime('%m%d%Y'))
+
+
+GRIN.seek(00)
+for line in GRIN:
+	l= line.split(",")
+	trait= lentil_traits[l[3].replace('"','')]
+	country= l[8].replace(" ","_").replace('"','')
+	phenotype = l[2].replace(" ","_").replace('"','')
+	grin_id = lentil_PI[(l[1]).replace('"','')]
+	OUTWRITE.write("GRIN\t"+					        #column1  OUTWRITE.write
+			grin_id+"\t"+				                #column2
+			call3()+"\t"+								#column3
+			"\t" +								        #column4
+			trait+"\t"+				                    #column5
+			"GRIN\t"+	                                #column6  pubmed ID??
+			"IDA\t"+							        #column7
+			"from_country(%s)"%(country)+"\t"+	        #column8
+			"T\t"+								        #column11
+			call3()+"\t"+				                #column10
+			str(l[1].replace('"',''))+"\t"+				#column11
+			"germplasm\t"+						        #column12
+			"taxon:362247\t"+						    #column13
+			date+"\t"+							        #column14
+			"austin_meier\t"+					        #column15
+			"has_phenotype_score(%s)"%(phenotype)+ "\t" #column16
+			"\n")
+
+OUTWRITE.close()
+
