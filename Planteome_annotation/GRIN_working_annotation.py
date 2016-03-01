@@ -5,8 +5,8 @@ import time
 traitname= "alkalisprd	amylose	awntype	blast	brancolor	daysanthes	daysflower	hullcolor	kernellen	kernelwid	kernelwtr	plantht1	plantht2	planttype	protein"
 traitname= traitname.split("\t")
 
-GRIN =open('/Users/meiera/PycharmProjects/Planteome_Annotation/why_wont_this_work_copy.csv')
-
+#GRIN =open('/Users/meiera/PycharmProjects/Planteome_Annotation/why_wont_this_work_copy.csv')
+GRIN =open('/Users/meiera/Documents/git/data_annotation/Planteome_annotation/why_wont_this_work_copy.csv')
 
 
 
@@ -48,12 +48,12 @@ def call6(l,ref):
 
 
 #define a function to generate column 16's content based on presence or absence of values in the grin dataframe
-#argument l = each line, with columns separated into a list
-#argument p = the column number the phenotype scores are in (the original sheet column number)
-def call816(l,p):
+#argument row = each line, with columns separated into a list
+#argument column_num = the column number the phenotype scores are in (the original sheet column number)
+def call816(row,column_num):
 	col16 =[]
-	country= l[6].replace(" ","_")					#remove spaces from the country name
-	phenotype_score= l[p-1].strip('\n')				#takes user input for which column the phenotype scores are in (minus one because python)
+	country= row[6].replace(" ","_")					#remove spaces from the country name
+	phenotype_score= row[column_num-1].strip('\n')				#takes user input for which column the phenotype scores are in (minus one because python)
 
 	if phenotype_score == "" and country =="":		#if both country, and phenotype score are missing
 		col16 =""
@@ -65,17 +65,17 @@ def call816(l,p):
 		col16= "has_phenotype_score(%s)|from_country(%s)" %(phenotype_score,country)
 	return str(col16)
 
-def call16(l,p):
+def call16(row,column_num):
 	col16 =""
-	phenotype_score= l[p-1].strip('\n')
+	phenotype_score= row[column_num-1].strip('\n')
 	if phenotype_score!="":
 		col16="has_phenotype_score(%s)"%(phenotype_score)
 	return col16
 
 
-def call8(l,p):
+def call8(row,column_num):
 	col8 =""
-	country= l[6].replace(" ","_")
+	country= row[6].replace(" ","_")
 	if country !="":
 		col8= "from_country(%s)"%(country)
 	return col8
@@ -86,24 +86,24 @@ def main(grin,grout, traitID, colnum, ref):
 	GRIN.seek(00)
 	for line in grin:
 		date=str(time.strftime('%m%d%Y'))
-		l= line.split(",")
+		row= line.split(",")
 		if l[colnum-1]!="":
 			grout.write ("GRIN\t"+						#column1
-					str(l[9])+"\t"+						#column2
-					str(l[5])+"\t"+						#column3
+					str(row[9])+"\t"+						#column2
+					str(row[5])+"\t"+						#column3
 					"\t" +								#column4
 					traitID+"\t"+						#column5
-					call6(l,ref)+"\t"+					#column6
+					call6(row,ref)+"\t"+					#column6
 					"IAGP\t"+							#column7
-					call8(l,colnum)+"\t"+				#column8
+					call8(row,colnum)+"\t"+				#column8
 					"T\t"+								#column11
-					str(l[5])+"\t"+						#column10
-					str(l[7])+"\t"+						#column11
+					str(row[5])+"\t"+						#column10
+					str(row[7])+"\t"+						#column11
 					"germplasm\t"+						#column12
 					"taxon:4530\t"+						#column13
 					date+"\t"+							#column14
 					"austin_meier\t"+					#column15
-					call16(l,colnum)+"\t"				#column16
+					call16(row,colnum)+"\t"				#column16
 					 "\n")
 
 
@@ -112,7 +112,8 @@ def main(grin,grout, traitID, colnum, ref):
 filenames=[]
 for trait_tup in nsf_project_obs:
 	#outfile= "/Users/meiera/Documents/Jaiswal/TO/test_folder/rice_staging/%s_trait_annotation.tsv" %(trait_tup[0])
-	outfile= "/Users/meiera/PycharmProjects/Planteome_Annotation/finished_assoc_files/%s_trait_annotation.tsv" %(trait_tup[0])
+	#outfile= "/Users/meiera/PycharmProjects/Planteome_Annotation/finished_assoc_files/%s_trait_annotation.tsv" %(trait_tup[0])
+	outfile= "/Users/meiera//Planteome_Annotation/finished_assoc_files/%s_trait_annotation.tsv" %(trait_tup[0])
 	OUTWRITE = open(outfile,"w")
 	main(GRIN,OUTWRITE,trait_tup[2],trait_tup[1],trait_tup[4])
 	OUTWRITE.close()
