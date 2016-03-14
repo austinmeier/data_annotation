@@ -1,4 +1,4 @@
-/local/cluster/bin/python2.7
+#!/local/cluster/bin/python2.7
 ########################################################################################
 #			imports and usage statement
 ########################################################################################
@@ -8,7 +8,7 @@ import re
 import imp
 import os
 
-usage_statement = "usage: python2.7 Planteome_annotate.py <OG_datafile.tsv> <Trait_map.csv> <name and path of output directory>
+usage_statement = "usage: python2.7 Planteome_annotate.py <OG_datafile.tsv> <Trait_map.csv> <name and path of output directory>"
 
 #check the number of arguments
 if len(sys.argv) !=4:
