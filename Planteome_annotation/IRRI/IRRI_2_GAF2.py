@@ -11,19 +11,98 @@
 import time
 import urllib2
 import json
+"""
 
-
-with open("/Users/austinmeier/test.json") as data_file:
+with open("/Users/meiera/Documents/git/data_annotation/Planteome_annotation/IRRI/test.json") as data_file:
     #unicode_json = json.load(data_file)
     trait_json=json.load(data_file)
+"""
 
+
+
+#########################################################################
+#                       web calls
+#########################################################################
+
+def mk_json(trait): #trait is a list that looks like this: [43696,"Awn color","awco_rev", "TO:0000141", "CO:xxxxxxx", "CO:xxxxxxx", "IDA"]
+    phenotypeID= str(trait[0])
+    webcall = "http://oryzasnp.org/iric-portal/ws/variety/phenotypes/%s" %(phenotypeID)
+    webcalled1=urllib2.urlopen(webcall).read()
+    tempjson = "/Users/meiera/Documents/git/data_annotation/Planteome_annotation/IRRI/test1.json"
+    TEMPJSON = open(tempjson, "w")
+    TEMPJSON.write(webcalled1)
+    TEMPJSON.close()
+    with open("/Users/meiera/Documents/git/data_annotation/Planteome_annotation/IRRI/test1.json") as data_file:
+        trait_json=json.load(data_file)
+    return trait_json
+
+
+"""
+webcalled1=urllib2.urlopen("http://oryzasnp.org/iric-portal/ws/variety/phenotypes/43696").read()
+
+tempjson = "/Users/meiera/Documents/git/data_annotation/Planteome_annotation/IRRI/test1.json"
+TEMPJSON = open(tempjson, "w")
+TEMPJSON.write(webcalled1)
+TEMPJSON.close()
+
+with open("/Users/meiera/Documents/git/data_annotation/Planteome_annotation/IRRI/test1.json") as data_file:
+    trait_json=json.load(data_file)
+
+
+print type(webcalled1)
+print(webcalled1)
+print(webcalled1.split(",")[0])
+#print(trait_json)
+
+#with webcalled1 as data_file1:
+#    trait_json1=json.load(data_file1)
+
+#print(trait_json1)
+
+
+#http://oryzasnp.org/iric-portal/ws/variety/phenotypes/43696
+
+"""
 
 
 
 #########################################################################
 #                       test stuffs
 #########################################################################
-testtraitlist = [43696,"Awn color","awco_rev", "TO:0000141", "CO:xxxxxxx", "CO:xxxxxxx", "IDA"]
+testtrait = [43696,"Awn color","awco_rev", "TO:0000141", "CO:xxxxxxx", "CO:xxxxxxx", "IDA"]
+
+testtraitlist =[[43696,"Awn color","awco_rev", "TO:0000141", "CO:xxxxxxx", "CO:xxxxxxx", "IDA"],["x","y","z"]]
+
+
+
+#########################################################################
+#                           MAIN
+#########################################################################
+
+'''
+### OLD MAIN
+def main():
+    outfile = "/Users/meiera/Documents/git/data_annotation/Planteome_annotation/IRRI/irri_test2.assoc"
+    OUTWRITE = open(outfile, "w")
+    OUTWRITE.write("!gaf-version: 2.0\n")
+    for object in trait_json:
+    #for object in webcalled1:
+        gafline(object,testtrait[2],OUTWRITE)
+    OUTWRITE.close()
+'''
+
+
+def main(testtraitlist):
+    outfile = "/Users/meiera/Documents/git/data_annotation/Planteome_annotation/IRRI/irri_test2.assoc"
+    OUTWRITE = open(outfile, "w")
+    OUTWRITE.write("!gaf-version: 2.0\n")
+    for trait in testtraitlist:
+        trait_json= mk_json(trait)
+
+        for object in trait_json:
+    #for object in webcalled1:
+            gafline(object,trait,OUTWRITE)
+    OUTWRITE.close()
 
 
 
@@ -32,11 +111,11 @@ testtraitlist = [43696,"Awn color","awco_rev", "TO:0000141", "CO:xxxxxxx", "CO:x
 #                        one run, one GAF line
 #########################################################################
 
-def gafline(phenotype_object,irriTraitName, outfile):
+def gafline(phenotype_object,testtrait, outfile):
 
     #check to make sure each column call function returns a value, if any return False, it will not write a GAF line
-    if col1() and col2(phenotype_object) and col3(phenotype_object)  and col5() and col6() and col7() \
-             and col9() and col12() and col13(phenotype_object) and col14() and col15 and col16(phenotype_object,irriTraitName):
+    if col1() and col2(phenotype_object) and col3(phenotype_object)  and col5(testtrait) and col6() and col7(testtrait) \
+             and col9() and col12() and col13(phenotype_object) and col14() and col15 and col16(phenotype_object,testtrait[2]):
 
         outfile.write(
         #print(
@@ -44,9 +123,9 @@ def gafline(phenotype_object,irriTraitName, outfile):
             col2(phenotype_object)+"\t"+
             col3(phenotype_object)+"\t"+
             col4()+"\t"+
-            col5()+"\t"+
+            col5(testtrait)+"\t"+
             col6()+"\t"+
-            col7()+"\t"+
+            col7(testtrait)+"\t"+
             col8(phenotype_object)+"\t"+
             col9()+"\t"+
             col10(phenotype_object)+"\t"+
@@ -55,20 +134,8 @@ def gafline(phenotype_object,irriTraitName, outfile):
             col13(phenotype_object)+"\t"+
             col14()+"\t"+
             col15()+"\t"+
-            col16(phenotype_object,irriTraitName)+"\t"+
+            col16(phenotype_object,testtrait[2])+"\t"+
             "\n")
-
-#########################################################################
-#                           MAIN
-#########################################################################
-
-def main():
-    outfile = "/Users/austinmeier/Desktop/irri_test.assoc"
-    OUTWRITE = open(outfile, "w")
-    OUTWRITE.write("!gaf-version: 2.0\n")
-    for object in trait_json:
-        gafline(object ,OUTWRITE)
-    OUTWRITE.close()
 
 
 
@@ -103,9 +170,10 @@ def col4():
     return ""
 
 #required
-def col5():
+def col5(testtrait):
     #return the TO:xxxxxxxx or CO:xxxxxxxx
-    return "TO:0000141"   #this is the test one, "awn color"
+    #return "TO:0000141"   #this is the test one, "awn color"
+    return testtrait[3]
 
 #required
 def col6():
@@ -113,9 +181,9 @@ def col6():
     return "IRIC"
 
 #required
-def col7():
+def col7(testtrait):
     #return the evidence code
-    return testtraitlist[6]
+    return testtrait[6]
 
 #not required
 def col8(phenotype_object):
@@ -153,7 +221,9 @@ def col11(phenotype_object):
     #check if the dictionary from json contains a iricStockPhenotypeId
     if 'name' in phenotype_object:
         Name= str(phenotype_object['name']).split('::')
-        return Name[1]
+        if len(Name)>1:
+            return Name[1]
+        else: return Name[0]
     else:
         return ""
 
@@ -199,19 +269,7 @@ def col16(phenotype_object,phenotypename):
     #return the evaluation location (evaluation_location(x))
 
 
-#########################################################################
-#                           MAIN
-#########################################################################
 
-def main():
-    outfile = "/Users/austinmeier/Desktop/irri_test2.assoc"
-    OUTWRITE = open(outfile, "w")
-    OUTWRITE.write("!gaf-version: 2.0\n")
-    for object in trait_json:
-        gafline(object,testtraitlist[2],OUTWRITE)
-    OUTWRITE.close()
-
-#outfile= "/Users/meiera/PycharmProjects/Planteome_Annotation/finished_assoc_files/%s_trait_annotation.tsv" %(trait_tup[0])
 
 
 
@@ -220,4 +278,4 @@ def main():
 #                    run actual code here
 #########################################################################
 
-main()
+main(testtraitlist)
