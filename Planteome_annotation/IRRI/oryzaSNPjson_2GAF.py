@@ -1,34 +1,32 @@
-#1. Pull down all traits with data in the database
-
-#2. Create list of lists of [irriID, irritrait, TO:ID, CO:ID, CO:variable,evidence_code]
-
-#3. Iterate over the "trait dictionary", and for every trait, create a line.
-
-# Where these are comming from:  http://oryzasnp.org/iric-portal/swagger-ui/index.html#!/default/GET_getPhenotype4AllVarieties
-#########################################################################
-#                       imports
-#########################################################################
 import time
 import urllib2
 import json
-"""
 
-with open("/Users/meiera/Documents/git/data_annotation/Planteome_annotation/IRRI/test.json") as data_file:
-    #unicode_json = json.load(data_file)
-    trait_json=json.load(data_file)
-"""
+outdir = "/Users/meiera/Documents/SVN/associations/to-associations/test_IRRI_TO/"
 
 
-
-#########################################################################
-#                       test stuffs
-#########################################################################
+#ignore these
 testtrait = [43696,"Awn color","awco_rev", "TO:0000141", "CO:xxxxxxx", "CO:xxxxxxx", "IDA"]
 
 testtraitlist =[[43696,"Awn color","awco_rev", "TO:0000141", "CO:xxxxxxx", "CO:xxxxxxx", "IDA"],
                 [43715,"flag leaf angle","fla_repro", "TO:0000124", "CO:xxxxxxx", "CO:xxxxxxx", "IDA"]]
 
+traitdict ={}   #this is what we will use
+with open("/Users/meiera/Documents/git/data_annotation/Planteome_annotation/IRRI/OryzaSNPtraitmap.csv") as infile:
+    for line in infile:
+        line1 = line.split(',')
+        traitdict[line1[0]] =  {'TOid':line1[1].strip(),'traitname':line1[2].strip(),'evidencecode':'IDA'}
 
+
+sampletraitdict ={  ### this is what the actual trait dictionary looks like
+    # 43718:{'TOid':'TO:0000269','traitname':'100-grain weight (gm) - cultivated','evidencecode':'IDA'},
+    # 43693:{'TOid':'TO:0000140','traitname':'Apiculus color at post-harvest','evidencecode':'IDA'},
+    # 43694:{'TOid':'TO:0000140','traitname':'Apiculus color at reproductive','evidencecode':'IDA'},
+    # 43695:{'TOid':'TO:0000294','traitname':'Auricle color at vegetative','evidencecode':'IDA'},
+    # 43696:{'TOid':'TO:0000141','traitname':'Awn color','evidencecode':'IDA'},
+    43766:{'TOid':'TO:0000141','traitname':'Awn color (Late observation)','evidencecode':'IDA'}
+
+}
 
 #########################################################################
 #                           MAIN
@@ -36,24 +34,24 @@ testtraitlist =[[43696,"Awn color","awco_rev", "TO:0000141", "CO:xxxxxxx", "CO:x
 
 
 
-def main(testtraitlist):
-    outfile = "/Users/meiera/Documents/git/data_annotation/Planteome_annotation/IRRI/irri_test2.assoc"
-    OUTWRITE = open(outfile, "w")
-    OUTWRITE.write("!gaf-version: 2.0\n")
-    for trait in testtraitlist:
-        trait_json= mk_json(trait)
+def main(traitdict):
+    for x in traitdict:
+        trait = traitdict[x] #returns a dictionary
+        outfile = "%s%s_OryzaSNP.assoc"%(outdir,trait['traitname'].replace(" ","_"))
+        with open(outfile, "w") as assocfile:
+            assocfile.write("!gaf-version: 2.0\n")
+            trait_json= mk_json(x)
+            print trait_json
+            for object in trait_json:
+                gafline(object,trait,assocfile)
 
-        for object in trait_json:
-    #for object in webcalled1:
-            gafline(object,trait,OUTWRITE)
-    OUTWRITE.close()
 
 #########################################################################
 #                       web calls
 #########################################################################
 
-def mk_json(trait): #trait is a list that looks like this: [43696,"Awn color","awco_rev", "TO:0000141", "CO:xxxxxxx", "CO:xxxxxxx", "IDA"]
-    phenotypeID= str(trait[0])
+def mk_json(traitnumber): #traitnumber is the ID that Oryzasnp uses, eg: 43696
+    phenotypeID= str(traitnumber)
     webcall = "http://oryzasnp.org/iric-portal/ws/variety/phenotypes/%s" %(phenotypeID)
     webcalled1=urllib2.urlopen(webcall).read()
     tempjson = "/Users/meiera/Documents/git/data_annotation/Planteome_annotation/IRRI/test1.json"
@@ -66,6 +64,7 @@ def mk_json(trait): #trait is a list that looks like this: [43696,"Awn color","a
 
 
 
+
 #########################################################################
 #                        one run, one GAF line
 #########################################################################
@@ -74,7 +73,7 @@ def gafline(phenotype_object,testtrait, outfile):
 
     #check to make sure each column call function returns a value, if any return False, it will not write a GAF line
     if  col2(phenotype_object) and col3(phenotype_object)  and col5(testtrait) and col6() and col7(testtrait) \
-             and col9() and col12() and col13(phenotype_object) and col14() and col15 and col16(phenotype_object,testtrait[2]):
+             and col9() and col12() and col13(phenotype_object) and col14() and col15 and col16(phenotype_object,testtrait):
 
         outfile.write(
         #print(
@@ -93,7 +92,7 @@ def gafline(phenotype_object,testtrait, outfile):
             col13(phenotype_object)+"\t"+
             col14()+"\t"+
             col15()+"\t"+
-            col16(phenotype_object,testtrait[2])+"\t"+
+            col16(phenotype_object,testtrait)+"\t"+
             "\n")
 
     else: print("sump'n aint right with this trait")
@@ -108,7 +107,7 @@ def col2(phenotype_object):
     #check if the dictionary from json contains an irisId
     if 'irisId' in phenotype_object:
     #return the IRIS_ID
-        return str(phenotype_object['irisId'])
+        return str(phenotype_object['irisId']).replace(" ","%20")
     else:
         print('record for\n', phenotype_object,"\nwill not be included.  It is missing an IRIS-ID")
         return False
@@ -132,7 +131,7 @@ def col4():
 def col5(testtrait):
     #return the TO:xxxxxxxx or CO:xxxxxxxx
     #return "TO:0000141"   #this is the test one, "awn color"
-    return testtrait[3]
+    return testtrait['TOid']
 
 #required
 def col6():
@@ -142,7 +141,7 @@ def col6():
 #required
 def col7(testtrait):
     #return the evidence code
-    return testtrait[6]
+    return testtrait['evidencecode']
 
 #not required
 def col8(phenotype_object):
@@ -214,11 +213,12 @@ def col15():
 
 #not required for GAF, but required for germplasm
 def col16(phenotype_object,phenotypename):
+    """displays the phenotype score along with the trait name as recorded.  No spaces allowed."""
     if 'value' in phenotype_object:
         #return the value
-        phenotype_value = str(phenotype_object['value'])
-        return "has_phenotype_score(" + phenotypename + "=" + phenotype_value +")"
-        return phenotypename+ str(phenotype_object['value'])
+        phenotype_value = str(phenotype_object['value']).replace(" ", "_")
+        return "has_phenotype_score(" + phenotypename['traitname'].replace(" ", "_") + "=" + phenotype_value +")"
+        #return phenotypename['traitname']+ str(phenotype_object['value'])
     else:
         print('record for\n', phenotype_object,"\nwill not be included.  It is missing a value")
         return False
@@ -237,4 +237,4 @@ def col16(phenotype_object,phenotypename):
 #                    run actual code here
 #########################################################################
 if __name__ == "__main__":
-    main(testtraitlist)
+    main(sampletraitdict)
