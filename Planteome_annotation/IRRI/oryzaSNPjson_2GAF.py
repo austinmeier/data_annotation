@@ -1,15 +1,9 @@
 import time
 import urllib2
 import json
+import re
 
 outdir = "/Users/meiera/Documents/SVN/associations/to-associations/test_IRRI_TO/"
-
-
-#ignore these
-testtrait = [43696,"Awn color","awco_rev", "TO:0000141", "CO:xxxxxxx", "CO:xxxxxxx", "IDA"]
-
-testtraitlist =[[43696,"Awn color","awco_rev", "TO:0000141", "CO:xxxxxxx", "CO:xxxxxxx", "IDA"],
-                [43715,"flag leaf angle","fla_repro", "TO:0000124", "CO:xxxxxxx", "CO:xxxxxxx", "IDA"]]
 
 traitdict ={}   #this is what we will use
 with open("/Users/meiera/Documents/git/data_annotation/Planteome_annotation/IRRI/OryzaSNPtraitmap.csv") as infile:
@@ -37,7 +31,8 @@ sampletraitdict ={  ### this is what the actual trait dictionary looks like
 def main(traitdict):
     for x in traitdict:
         trait = traitdict[x] #returns a dictionary
-        outfile = "%s%s_OryzaSNP.assoc"%(outdir,trait['traitname'].replace(" ","_"))
+        outname = re.sub('[^a-zA-Z0-9 \n\.]', '', trait['traitname'])
+        outfile = "%s%s_OryzaSNP.assoc"%(outdir,outname.replace(" ","_"))
         with open(outfile, "w") as assocfile:
             assocfile.write("!gaf-version: 2.0\n")
             trait_json= mk_json(x)
@@ -107,7 +102,7 @@ def col2(phenotype_object):
     #check if the dictionary from json contains an irisId
     if 'irisId' in phenotype_object:
     #return the IRIS_ID
-        return str(phenotype_object['irisId']).replace(" ","%20")
+        return str(phenotype_object['irisId']).replace(" ","_")
     else:
         print('record for\n', phenotype_object,"\nwill not be included.  It is missing an IRIS-ID")
         return False
@@ -237,4 +232,4 @@ def col16(phenotype_object,phenotypename):
 #                    run actual code here
 #########################################################################
 if __name__ == "__main__":
-    main(sampletraitdict)
+    main(traitdict)
