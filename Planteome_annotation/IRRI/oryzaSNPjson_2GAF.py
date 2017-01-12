@@ -204,7 +204,7 @@ def col14():
 #not required
 def col15():
     #return assigned_by
-    return "austin_meier"
+    return "Planteome:Austin_Meier"
 
 #not required for GAF, but required for germplasm
 def col16(phenotype_object,phenotypename):

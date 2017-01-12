@@ -10,7 +10,8 @@
 #########################################################################
 import time
 import csv
-
+import logging
+import os
 
 
 #########################################################################
@@ -21,10 +22,26 @@ import csv
 
 testtraitlist =[[10,"Apiculus color","AUCO_REV_VEG", "TO:0000141", "CO:xxxxxxx", "CO:xxxxxxx", "IDA"]]
 
+testtrait = {
+    'colnum': 10,
+    'name': 'Apiculus color',
+    'GRIMS MORPHO1': 'AUCO_REV_VEG',
+    'to_id': "TO:0000141",
+    'co_id': 'CO:xxxxxxx',
+    'pheno_relation': 'has_absolute_phenotype({})',
+    'unit': None,
+    'evidence': 'IDA'
+}
+
+testtraitlist = []
+
 
 #########################################################################
 #                           import data
 #########################################################################
+
+outdir = "/Users/meiera/Documents/SVN/associations/to-associations/test_IRRI_TO/"
+
 
 rawdata="/Users/meiera/Documents/Jaiswal/Planteome/IRRI/irri_data_text/combined_requete.tsv"
 #rawdata="/Users/meiera/Documents/Jaiswal/Planteome/IRRI/irri_data_text/test_requete.tsv"
@@ -33,47 +50,110 @@ rawcsv = open(rawdata,'rb')
 errors="/Users/meiera/Documents/Jaiswal/Planteome/IRRI/irri_data_text/errorfile.txt"
 #outfile = "/Users/meiera/Documents/git/data_annotation/Planteome_annotation/IRRI/GRIMS_awncolor.assoc"
 outfile = "/Users/meiera/Documents/SVN/associations/to-associations/test_IRRI_TO/GRIMS_awncolor2.assoc"
+mapfile = "/Users/meiera/Documents/Jaiswal/Planteome/IRRI/GBUSER_TK_MORPH1_2.tsv"
 
+logger = logging.getLogger(__name__)
+logging_format = "[%(levelname)s] %(name)s %(asctime)s %(message)s"
+logging.basicConfig(format=logging_format, level=logging.CRITICAL) #filename=errors,
 
+testtrait = {
+    'colnum': 10,
+    'name': 'Apiculus color',
+    'GRIMS MORPHO1': 'AUCO_REV_VEG',
+    'to_id': "TO:0000141",
+    'co_id': 'CO:xxxxxxx',
+    'pheno_relation': 'has_absolute_phenotype({})',
+    'unit': None,
+    'evidence': 'IDA'
+}
 
-
+def load_map(mapfile):
+    headers = []
+    with open(rawdata,'rb') as infile:
+        reader = csv.reader(infile, delimiter='\t', quotechar='"')
+        headers = next(reader)
+        # headers = infile.readline().split('\t')
+    print headers
+    with open(mapfile,'rb') as infile:
+        traitmap = csv.reader(infile, delimiter='\t', quotechar='"')
+        for trait in traitmap:
+            logger.debug('#############################################################\n                   {}                    \n#############################################################'.format(trait[0]))
+            # check that there is only one TO mapping.
+            to_mapping = filter(None, trait[7].split(","))  # trait[7].split(",")
+            logger.debug('number of TO classes mapped to {}: {}'.format(trait[0],len(to_mapping)))
+            if len(to_mapping) == 0:
+                logger.warning('No TO class match found for {}'.format(trait[0]))
+                continue
+            elif len(to_mapping) > 1:
+                logger.warning('multiple TO classes mapped to {}'.format(trait[0]))
+                continue
+            # find the column number that contains the scores of the trait
+            if trait[0] in headers:
+                colnum = headers.index(trait[0])
+            else:
+                logger.warning('{} not found in data headers'.format(trait[0]))
+                continue
+            # choose the correct phenotype relationship
+            if trait[3] == 'absolute':
+                phenorelation = 'has_absolute_phenotype({}{})'
+            elif trait[3] == 'relative':
+                phenorelation = 'has_relative_phenotype({}{})'
+            else:
+                logger.warning('no absolute/relative rating for mapped to: {} the relationship found is: "{}"'.format(trait[0],trait[3]))
+                continue
+            if trait[2] != '':
+                unit = trait[2]
+            else:
+                unit = ''
+            trait_dict = {
+                'colnum': colnum,
+                'name': trait[1],
+                'GRIMS MORPHO1': trait[0],
+                'to_id': trait[7],
+                'co_id': trait[5],
+                'pheno_relation': phenorelation,
+                'unit': unit,
+                'evidence': 'IDA'
+            }
+            # print trait_dict['unit']
+            testtraitlist.append(trait_dict)
+    return headers
 #########################################################################
 #                           MAIN
 #########################################################################
 
-
-
-def main(testtraitlist,rawcsv):
-    global OUTWRITE
-    global ERRORFILE
+def main(testtraitlist,rawdata):
+    # global OUTWRITE
     global excluded_list
-    OUTWRITE = open(outfile, "w")
-    OUTWRITE.write("!gaf-version: 2.0\n")
-    ERRORFILE = open(errors,"w")
-    ERRORFILE.write("these are your errors:")
     excluded_list=[]
-    with rawcsv as infile:
-        GRIMS = csv.reader(infile, delimiter='\t', quotechar='"')
-        for trait in testtraitlist:
+
+    for trait in testtraitlist:
+        outfile = outdir + str(trait['GRIMS MORPHO1']) + '.assoc'
+        # OUTWRITE = open(outfile, 'w')
+        with open(rawdata, 'rb') as infile, open(outfile,'w') as OUTWRITE:
+            OUTWRITE.write("!gaf-version: 2.0\n")
+            GRIMS = csv.reader(infile, delimiter='\t', quotechar='"')
             for accession in GRIMS:
                 gafline(accession,trait,OUTWRITE)
     print str(len(excluded_list))+" accessions were not included.  See errorfile.txt for details."
-    OUTWRITE.close()
-    ERRORFILE .close()
-
+    logger.warning(str(len(excluded_list)) + " accessions were not included.  See errorfile.txt for details.")
+    # OUTWRITE.close()
 
 
 #########################################################################
 #                        one run, one GAF line
 #########################################################################
-"""
-accession is equal to one row in the GRIMS dataframe
-traitinfo is the list that includes the name of the trait, its CO#, TO#, column in GRIMS dataframe where the scores can be found, and evidence code
-outfile is where to write the GAF line
-"""
+
 
 def gafline(accession,traitinfo, outfile):
-    #check to make sure each column call function returns a value, if any return False, it will not write a GAF line
+    """
+    check to make sure each column call function returns a value, if any return False, it will not write a GAF line
+    :param accession: This is a row from the GRIMS file
+    :param traitinfo: A single trait, list form -- [10,"Apiculus color","AUCO_REV_VEG", "TO:0000141", "CO:xxxxxxx", "CO:xxxxxxx", "IDA"]
+    :param outfile: self explanitory
+    :return: nothing.  Just writes lines to the outfile.
+    """
+    logger.critical('The accession:\n{}\nThe trait:\n{}'.format(accession,traitinfo))
     if  col2(accession) and col3(accession)  and col5(traitinfo) and col6() and col7(traitinfo) \
              and col9() and col12() and col13(accession) and col14() and col15 and col16(accession,traitinfo):
 
@@ -103,122 +183,123 @@ def gafline(accession,traitinfo, outfile):
 
 # required
 def col1():
+    """DB"""
     return "GRIMS"
 
-#required
+
 def col2(accession):
+    """DB Object ID: required."""
     #check if the dictionary from json contains an irisId
-    if accession[0] != "":
+    if accession[1] != "":
     #return the IRIS_ID
         return str(accession[0])
     else:
-        ERRORFILE.write("Accession:" + str(accession[0]) + "- will not be included.  It is missing an accession number")
+        #ERRORFILE.write("Accession:" + str(accession[0]) + "- will not be included.  It is missing an accession number")
+        logger.warning("Accession:\t" + str(accession[0]) + "\t- will not be included.  It is missing an accession number")
         return False
 
-#required
+
 def col3(accession):
+    """DB Object Symbol: required"""
     #check if name field is populated
     if accession[187] != "":
         #return the germplasm name (unless here is a germplasm symbol)
         return accession[187]
     else:
-        ERRORFILE.write("Accession:" + str(accession[0]) + "-will not be included.  It is missing a name")
+        #ERRORFILE.write("Accession:" + str(accession[0]) + "-will not be included.  It is missing a name")
+        logger.warning("Accession:\t" + str(accession[0]) + "\t-will not be included.  It is missing a name")
         return False
 
-#not required
+
 def col4():
+    """Qualifier: not required"""
     return ""
 
-#required
+
 def col5(testtrait):
-    #return the TO:xxxxxxxx or CO:xxxxxxxx
-    #return "TO:0000141"   #this is the test one, "awn color"
-    return testtrait[3]
+    """Direct Annotation (TO:xxxxxxxx or CO:xxxxxxxx): required"""
+    return testtrait['to_id']  #replace with 'co_id' to annotate to this
 
 #required
 def col6():
+    """	DB:Reference (|DB:Reference)"""
     #return IRIC  (no pmid)
     return "GRIMS"
 
-#required
 def col7(testtrait):
-    #return the evidence code
-    return testtrait[6]
+    """Evidence Code: required"""
+    return testtrait['evidence']
 
-#not required
 def col8(accession):
+    """With (or) From: not required"""
     #check if the sheet contains a country in column 154 "ORI_COUNTRY" or "LOCATION_M"
-
     if accession[154] !="":
         #return the germplasm name (unless here is a germplasm symbol)
         country_origin= accession[154]
         column8= "from_country(%s)"%(country_origin)
         return column8.replace(" ","_")
     else:
-        ERRORFILE.write('Accession:' + str(accession[0]) + " is missing a country of origin")
+        logger.warning('Accession:\t' + str(accession[0]) + "\tis missing a country of origin")
         return ""
 
-#required
 def col9():
-    #return aspect
+    """Aspect: required"""
     return "T"
 
-#not required
 def col10(accession):
+    """DB Object Name: not required"""
     #187 has just the name, 188 has the name;some other codes; separated with semicolons; eg: "RADIN EBOS 64; ; FAO GS 1180; ;"
 
        #check if name field is populated
-    if accession[187] !="":
+    if accession[187] != "":
         #return the germplasm name (unless here is a germplasm symbol)
         return accession[187]
     else:
-        errorfile.write('Accession:' + str(accession[0]) + " - will not be included.  It is missing a name")
+        logger.warning('Accession:\t' + str(accession[0]) + "\twill not be included.  It is missing a name")
         return ""
 
-
-#not required
 def col11(accession):
+    """	DB Object Synonym (|Synonym): not required"""
     #throw some SYNONYMS in there
-    full_ccno_name=accession[188].split(";")
+    full_ccno_name = accession[188].split(";")
     if len(full_ccno_name) >1:
-        return full_ccno_name[2]
+        return full_ccno_name[1]
     else:
         return ""
 
-
-#required
 def col12():
-    #return object type
+    """DB Object type: required"""
     return "germplasm"
 
 #required
 def col13(accession):
+    """Taxon (|taxon): required"""
     taxon=accession[96]
     if taxon=="Indica": return "NCBITaxon:39946"
     elif taxon =="Japonica": return "NCBITaxon:39947"
     elif taxon =="Javanica": return "NCBITaxon:4530"
     elif taxon =="Intermediate(hybrid)": return "NCBITaxon:1080340"
-    else: return "NCBITaxon:4530"
-    #return "NCBITaxon:4530"   #this is the generic oryza stativa NCBITaxon
+    else: return "NCBITaxon:4530"  #this is the generic oryza stativa NCBITaxon
 
-#required
 def col14():
-    #return date
+    """Date: required"""
     date=str(time.strftime('%m%d%Y'))
     return date
 
 #not required
 def col15():
-    #return assigned_by
-    return "austin_meier"
+    """Assigned by: not required"""
+    return "Planteome:Austin_Meier"
 
 #not required for GAF, but required for germplasm
 def col16(accession,testtrait):
-    #print testtrait[0]
-    if accession[testtrait[0]] !="":
-        return "has_phenotype_score(%s)"%(accession[testtrait[0]])
+    """Annotation extension: required (for germplasm)"""
+    #
+    if accession[testtrait['colnum']] !="":
+        return testtrait['pheno_relation'].format(accession[testtrait['colnum']],testtrait['unit'])
     else:
-        ERRORFILE.write("Accession:%s has no score for %s"%(accession[0],testtrait[1]))
+        # ERRORFILE.write("Accession:%s has no score for %s"%(accession[0],testtrait[1]))
+        logger.warning("Accession:{} has no score for {}".format(accession[0],testtrait['name']))
         return False
 
 
@@ -230,8 +311,15 @@ def col16(accession,testtrait):
 #                    run actual code here
 #########################################################################
 
-main(testtraitlist,rawcsv)
-    #for accession in GRIMS:
-     #   print col16(accession,testtrait)
 
 
+
+if __name__ == "__main__":
+    load_map(mapfile)
+    # print rawdata
+    # print len(testtraitlist)
+    main(testtraitlist,rawdata)
+
+#
+# print len(testtraitlist)
+# print testtraitlist
