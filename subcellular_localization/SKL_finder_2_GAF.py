@@ -1,9 +1,19 @@
 from Bio import SeqIO
 import datetime
 import pandas as pd
+import sys
 
-peptide_sequence_fasta = "/Users/meiera/Documents/Jaiswal/Planteome/black_box_project/IRGSP-1.0_predicted-protein_2017-08-04.fasta"  #this is just the predicted ones
-OUTGAF = "/Users/meiera/Google Drive/Jaiswal/subcellular_localization_project/SKL.gaf"
+usage_statement= "usage: <path>/SKL_finder_2_GAF.py <fasta input> <gaf destination>\nexample: ./SKL_finder_2_GAF.py first500.fasta_predotar_results first500.gaf"
+
+#check to make sure there is a specified infile, and outfile
+if len(sys.argv) != 3:
+	print(len(sys.argv))
+	print("Error:  This script requires 2 arguments, the input fasta file, and output file.\n%s" %(usage_statement))
+	quit()
+
+#read arguments
+peptide_sequence_fasta = sys.argv[1]
+OUTGAF= sys.argv[2]
 
 def writegaf(id):
     gene_name = id.split('-')[0].replace('t','g')
